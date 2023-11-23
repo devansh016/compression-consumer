@@ -32,18 +32,15 @@ async function consumeMessages() {
         const jsonMessage = JSON.parse(message.content.toString());
         console.log(`Received message from queue "${queueName}":`, jsonMessage);
 
-        // Download the file from S3
+        const s3Key = jsonMessage.s3Key;
         const downloadParams = {
-          Key: jsonMessage.s3Key,
+          Key: s3Key,
           Bucket: process.env.AWS_S3_BUCKET,
         };
-
         const downloadStream = s3.getObject(downloadParams).createReadStream();
 
         // Use tmp to create a temporary file
-        const tmpFile = tmp.fileSync({
-          postfix: path.extname(jsonMessage.s3Key),
-        });
+        const tmpFile = tmp.fileSync({ postfix: path.extname(s3Key) });
         const outputFilePath = tmpFile.name;
 
         // Use FFmpeg to compress the video
@@ -62,19 +59,16 @@ async function consumeMessages() {
         };
 
         const uploadResult = await s3.upload(uploadParams).promise();
-
-        // Clean up - delete temporary files
         tmpFile.removeCallback();
 
-        // Respond with the S3 URL of the compressed video
+        // Sending to Email Queue
         sendToEmailQueue({
           senderName: jsonMessage.senderName,
           fileUrl: uploadResult.Location,
-          emailReceiver: jsonMessage.senderName,
-          shareid: files.shareid,
+          emailReceiver: jsonMessage.emailReceiver,
+          shareid: jsonMessage.shareid,
         });
-        console.log("File Compressed", { url: uploadResult.Location });
-        // Acknowledge the message to remove it from the queue
+        console.log({ url: uploadResult.Location });
         channel.ack(message);
       }
     });
