@@ -19,7 +19,7 @@ const rabbitmqURL = process.env.AMQP_URL;
 async function consumeMessages() {
   try {
     // Create a connection to RabbitMQ server
-    const queueName = "compression_queue";
+    const queueName = "compression_request_queue";
     const connection = await amqp.connect(rabbitmqURL);
     const channel = await connection.createChannel();
     channel.prefetch(1);
@@ -62,13 +62,11 @@ async function consumeMessages() {
         tmpFile.removeCallback();
 
         // Sending to Email Queue
-        sendToEmailQueue({
-          senderName: jsonMessage.senderName,
-          fileUrl: uploadResult.Location,
-          emailReceiver: jsonMessage.emailReceiver,
+        sendToCompressionResultQueue({
+          CompressedFileUrl: uploadResult.Location,
           shareid: jsonMessage.shareid,
         });
-        console.log({ url: uploadResult.Location });
+        console.log("Compression Done");
         channel.ack(message);
       }
     });
@@ -77,15 +75,15 @@ async function consumeMessages() {
   }
 }
 
-async function sendToEmailQueue(jsonMessage) {
+async function sendToCompressionResultQueue(jsonMessage) {
   try {
-    const queueName = "email_queue";
+    const queueName = "compression_result_queue";
     const connection = await amqp.connect(rabbitmqURL);
     const channel = await connection.createChannel();
     await channel.assertQueue(queueName, { durable: false });
 
     channel.sendToQueue(queueName, Buffer.from(JSON.stringify(jsonMessage)));
-    console.log(`Email request sent to queue "${queueName}":`, jsonMessage);
+    console.log(`Request sent to queue "${queueName}":`, jsonMessage);
 
     await channel.close();
     await connection.close();
