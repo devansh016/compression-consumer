@@ -62,8 +62,10 @@ async function consumeMessages() {
         tmpFile.removeCallback();
 
         // Sending to Email Queue
+        console.log(uploadResult);
         sendToCompressionResultQueue({
           CompressedFileUrl: uploadResult.Location,
+          CompressedFilekey: uploadResult.Key,
           shareid: jsonMessage.shareid,
         });
         console.log("Compression Done");
