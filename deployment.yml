@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: compression-consumer
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: compression-consumer
+  template:
+    metadata:
+      labels:
+        app: compression-consumer
+    spec:
+      containers:
+        - name: compression-consumer
+          image: devansh016/compression_consumer:1.0
